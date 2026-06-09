@@ -1,0 +1,8 @@
+setuptools
+requests
+streamlit
+beautifulsoup4
+textblob
+matplotlib
+langdetect
+playwright
