@@ -1,4 +1,4 @@
-# TikTok Yorum Analiz Sistemi
+# Sosyal Medya Yorum Analiz Sistemi
 
 Bu proje, bir TikTok videosuna gelen yorumları çekip bu yorumları yapay zekâ destekli olarak analiz eden bir web uygulamasıdır.
 
