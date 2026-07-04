@@ -57,6 +57,7 @@ Python ile web arayüzü oluşturmayı sağlar. Bu projede uygulamanın ekranı 
 Kullanıcı Streamlit ekranından:
 
 - TikTok linki girer
+- Xquik CSV dışa aktarımı yükler
 - Analizi başlatır
 - Sonuçları tablo, grafik ve rapor olarak görür
 
@@ -110,6 +111,12 @@ LLM genel rapor üretir
 4. Sistem yorumları çekmeye başlar.
 5. Yorumlar analiz edilir.
 6. Sonuçlar ekranda gösterilir.
+
+Xquik kullanıyorsanız `text`, `tweet_text`, `full_text`, `content`, `body`,
+`message` veya `comment` metin sütunlarından birini içeren CSV dışa aktarımını
+yükleyip **Xquik CSV Analiz Et** butonuyla aynı analiz akışını çalıştırabilirsiniz.
+Boş metin satırları atlanır; kullanıcı, kaynak ID ve tarih alanları tabloda
+korunur.
 
 Örnek TikTok linki:
 
