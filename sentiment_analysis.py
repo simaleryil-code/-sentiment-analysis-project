@@ -18,6 +18,7 @@ import streamlit as st
 from scrapper import TikTokExtractor
 from llm_analyzer import OllamaCommentAnalyzer
 from llm_comment_classifier import OllamaCommentClassifier
+from xquik_export import build_xquik_metadata, normalize_xquik_export
 
 
 nltk.download("punkt")
@@ -2112,28 +2113,10 @@ header[data-testid="stHeader"]::before,
             st.markdown(cards_html, unsafe_allow_html=True)
 
 
-    def run_analysis(self, video_url, status_placeholder):
-        output_file = "output.json"
-
-        self.render_status(status_placeholder, "scraping")
-
-        scraper = TikTokExtractor(
-            url=video_url,
-            output=output_file,
-            comment_count=2000,
-            file_type="json"
-        )
-
-        scraper.run()
-
+    def store_analysis_result(self, comments, metadata, status_placeholder):
         self.render_status(status_placeholder, "sentiment_analyzing")
 
-        with open(output_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        comments = [c for c in data.get("comments", []) if c.get("comment")]
         original_comment_texts = [comment_data["comment"] for comment_data in comments]
-        metadata = data["metadata"]
 
         classifier = OllamaCommentClassifier(model="qwen2.5:3b")
 
@@ -2164,6 +2147,7 @@ header[data-testid="stHeader"]::before,
         for index, comment_data in enumerate(comments[:100], start=1):
             comment = comment_data["comment"]
             username = comment_data.get("username", "Anonim")
+            source_id = comment_data.get("source_id", "")
 
             classification = classification_map.get(index, {
                 "sentiment": "Nötr",
@@ -2182,6 +2166,7 @@ header[data-testid="stHeader"]::before,
 
             analyzed_comments.append({
                 "Kullanıcı": username,
+                "Kaynak ID": source_id,
                 "Yorum": comment,
                 "Duygu": sentiment_label,
                 "Kategori": classification.get("category", "Diğer"),
@@ -2209,8 +2194,38 @@ header[data-testid="stHeader"]::before,
 
         st.session_state["table_page"] = 1
 
+    def run_analysis(self, video_url, status_placeholder):
+        output_file = "output.json"
+
+        self.render_status(status_placeholder, "scraping")
+
+        scraper = TikTokExtractor(
+            url=video_url,
+            output=output_file,
+            comment_count=2000,
+            file_type="json"
+        )
+
+        scraper.run()
+
+        with open(output_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        comments = [c for c in data.get("comments", []) if c.get("comment")]
+        metadata = data["metadata"]
+        self.store_analysis_result(comments, metadata, status_placeholder)
+
         if os.path.exists(output_file):
             os.remove(output_file)
+
+    def run_xquik_analysis(self, uploaded_file, status_placeholder):
+        comments = normalize_xquik_export(uploaded_file.getvalue())
+        if not comments:
+            st.warning("CSV içinde analiz edilecek metin bulunamadı.")
+            return
+
+        metadata = build_xquik_metadata(comments)
+        self.store_analysis_result(comments, metadata, status_placeholder)
 
     def render_saved_result(self):
         result = st.session_state.get("analysis_result")
@@ -2264,9 +2279,36 @@ header[data-testid="stHeader"]::before,
             with col_btn:
                 analyze_button = st.form_submit_button("Yorumları Analiz Et")
 
+            st.markdown(
+                "<div class='input-label'>Xquik CSV Dışa Aktarımı:</div>",
+                unsafe_allow_html=True
+            )
+            xquik_file = st.file_uploader(
+                "Xquik CSV Dışa Aktarımı:",
+                type=["csv"],
+                label_visibility="collapsed"
+            )
+            xquik_button = st.form_submit_button("Xquik CSV Analiz Et")
+
             status_placeholder = st.empty()
 
-        if analyze_button:
+        if xquik_button:
+            st.session_state.pop("analysis_result", None)
+            st.session_state["table_page"] = 1
+
+            if xquik_file is None:
+                status_placeholder.empty()
+                st.error("Bir Xquik CSV dosyası seçin.")
+                return
+
+            try:
+                self.run_xquik_analysis(xquik_file, status_placeholder)
+            except Exception as e:
+                status_placeholder.empty()
+                st.session_state.pop("analysis_result", None)
+                st.error(f"Bir hata oluştu: {e}")
+
+        elif analyze_button:
             st.session_state.pop("analysis_result", None)
             st.session_state["table_page"] = 1
     
